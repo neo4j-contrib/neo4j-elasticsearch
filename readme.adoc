@@ -11,21 +11,24 @@ This Neo4j Kernel Extension updates an ElasticSearch instance or cluster with ch
 
 A transaction event listener checks changed Nodes against a given label, renders the whole node as json document and indexes all changes in bulk with ES.
 
+[NOTE]
+For the test to work, an elastic{search} server should be running on localhost:9200
+
 === Configuration
 
 Add to `conf/neo4j.properties`:
 
 ----
-# optional
-elasticsearch.cluster_name="my.cluster"
+elasticsearch.host_name=http://localhost:9200
 # todo will be more complex later
-elasticsearch.node_selection="label"
-elasticsearch.index="my-index"
+elasticsearch.node_selection=MyLabel
+elasticsearch.index_name=my_index
 ----
+
 
 === Todo
 
 * Support set of labels for checking
 * Different index name per label
 * Set of properties per labels to be sent to ES :Label(+prop2,-prop2)
-* idea for syntax `index:Label(+prop,-prop)`
+* idea for syntax `indexName:Label(+prop,-prop)`

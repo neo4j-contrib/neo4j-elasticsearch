@@ -1,75 +1,83 @@
 package org.neo4j.elasticsearch;
 
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
+import io.searchbox.action.Action;
+import io.searchbox.action.BulkableAction;
+import io.searchbox.client.JestClient;
+import io.searchbox.client.JestResult;
+import io.searchbox.client.JestResultHandler;
+import io.searchbox.core.Bulk;
+import io.searchbox.core.Delete;
+import io.searchbox.core.Index;
+import io.searchbox.core.Update;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
+import org.neo4j.kernel.impl.util.StringLogger;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 /**
 * @author mh
 * @since 25.04.15
 */
-class ElasticSearchEventHandler implements TransactionEventHandler<Object> {
-    public static final TimeValue TIMEOUT = TimeValue.timeValueSeconds(5);
-    private final Client client;
+class ElasticSearchEventHandler implements TransactionEventHandler<List<BulkableAction>>, JestResultHandler<JestResult> {
+    private final JestClient client;
     private final String indexName;
     // todo set of indexName + label + property-names (+include, -exclude)
     private final Label label;
     private final String labelName;
+    private final StringLogger logger;
+    private final GraphDatabaseService gds;
 
-    public ElasticSearchEventHandler(Client client, String indexName, String labelName) {
+    public ElasticSearchEventHandler(JestClient client, String indexName, String labelName, StringLogger logger, GraphDatabaseService gds) {
         this.client = client;
         this.indexName = indexName;
         this.labelName = labelName;
+        this.logger = logger;
+        this.gds = gds;
         this.label = DynamicLabel.label(labelName);
     }
 
     @Override
-    public Object beforeCommit(TransactionData transactionData) throws Exception {
-        return null;
-    }
-
-    @Override
-    public void afterCommit(TransactionData transactionData, Object o) {
-        BulkRequestBuilder req = client.prepareBulk();
-
+    public List<BulkableAction> beforeCommit(TransactionData transactionData) throws Exception {
+        List<BulkableAction> actions = new ArrayList<>(1000);
         for (Node node : transactionData.createdNodes()) {
-            if (hasLabel(node)) req.add(indexRequest(node));
+            if (hasLabel(node)) actions.add(indexRequest(node));
         }
         for (Node node : transactionData.deletedNodes()) {
-            if (hasLabel(node)) req.add(deleteRequest(node));
+            if (hasLabel(node)) actions.add(deleteRequest(node));
         }
         for (LabelEntry labelEntry : transactionData.assignedLabels()) {
-            if (hasLabel(labelEntry)) req.add(updateRequest(labelEntry.node()));
+            if (hasLabel(labelEntry)) actions.add(indexRequest(labelEntry.node()));
         }
         for (LabelEntry labelEntry : transactionData.removedLabels()) {
-            if (hasLabel(labelEntry)) req.add(deleteRequest(labelEntry.node()));
+            if (hasLabel(labelEntry)) actions.add(deleteRequest(labelEntry.node()));
         }
         for (PropertyEntry<Node> propEntry : transactionData.assignedNodeProperties()) {
             if (hasLabel(propEntry))
-                req.add(updateRequest(propEntry.entity()));
+                actions.add(indexRequest(propEntry.entity()));
         }
         for (PropertyEntry<Node> propEntry : transactionData.removedNodeProperties()) {
             if (hasLabel(propEntry))
-                req.add(updateRequest(propEntry.entity()));
+                actions.add(updateRequest(propEntry.entity()));
         }
-        req.get(TIMEOUT);
+        return actions.isEmpty() ? Collections.<BulkableAction>emptyList() : actions;
+    }
+
+    @Override
+    public void afterCommit(TransactionData transactionData, List<BulkableAction> actions) {
+        if (actions.isEmpty()) return;
+        try {
+            Bulk bulk = new Bulk.Builder()
+                    .defaultIndex(indexName)
+                    .defaultType(typeName()).addAction(actions).build();
+            client.executeAsync(bulk, this);
+        } catch (Exception e) {
+            logger.warn("Error updating ElasticSearch ", e);
+        }
     }
 
     private boolean hasLabel(Node node) {
@@ -89,39 +97,31 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Object> {
         return labelName;
     }
 
-    private IndexRequest indexRequest(Node node) {
-        return new IndexRequest(indexName, typeName(), id(node)).source(nodeToJson(node));
+    private Index indexRequest(Node node) {
+        return new Index.Builder(nodeToJson(node)).id(id(node)).build();
     }
 
-    private DeleteRequest deleteRequest(Node node) {
-        return new DeleteRequest(indexName, typeName(), id(node));
+    private Delete deleteRequest(Node node) {
+        return new Delete.Builder(id(node)).build();
     }
 
-    private UpdateRequest updateRequest(Node node) {
-        try {
-            return new UpdateRequest(indexName, typeName(),id(node)).source(nodeToJson(node));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    private Update updateRequest(Node node) {
+        return new Update.Builder(nodeToJson(node)).id(id(node)).build();
     }
 
     private String id(Node node) {
         return String.valueOf(node.getId());
     }
 
-    private XContentBuilder nodeToJson(Node node) {
-        try {
-            XContentBuilder json = jsonBuilder().startObject();
-            json.field("id", id(node));
-            json.array("nodeSelection", labels(node));
-            for (String prop : node.getPropertyKeys()) {
-                Object value = node.getProperty(prop);
-                json.field(prop, value);
-            }
-            return json.endObject();
-        } catch(IOException ioe) {
-            throw new RuntimeException(ioe);
+    private Map nodeToJson(Node node) {
+        Map<String,Object> json = new LinkedHashMap<>();
+        json.put("id", id(node));
+        json.put("labels", labels(node));
+        for (String prop : node.getPropertyKeys()) {
+            Object value = node.getProperty(prop);
+            json.put(prop, value);
         }
+        return json;
     }
 
     private String[] labels(Node node) {
@@ -133,7 +133,21 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Object> {
     }
 
     @Override
-    public void afterRollback(TransactionData transactionData, Object o) {
+    public void afterRollback(TransactionData transactionData, List<BulkableAction> actions) {
 
+    }
+
+    @Override
+    public void completed(JestResult jestResult) {
+        if (jestResult.isSucceeded() && jestResult.getErrorMessage() == null) {
+            logger.debug("ElasticSearch Update Success");
+        } else {
+            logger.warn("ElasticSearch Update Failed: " + jestResult.getErrorMessage());
+        }
+    }
+
+    @Override
+    public void failed(Exception e) {
+        logger.warn("Problem Updating ElasticSearch ",e);
     }
 }

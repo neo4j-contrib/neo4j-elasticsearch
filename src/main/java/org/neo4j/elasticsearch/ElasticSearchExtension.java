@@ -1,11 +1,13 @@
 package org.neo4j.elasticsearch;
 
-import org.elasticsearch.client.Client;
+import io.searchbox.client.JestClient;
+import io.searchbox.client.JestClientFactory;
+import io.searchbox.client.config.HttpClientConfig;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
-import static org.elasticsearch.node.NodeBuilder.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author mh
@@ -14,30 +16,38 @@ import static org.elasticsearch.node.NodeBuilder.*;
 public class ElasticSearchExtension implements Lifecycle {
     private final GraphDatabaseService gds;
     private final StringLogger logger;
-    private final String clusterName;
-    private org.elasticsearch.node.Node node;
+    private final String hostName;
+    private boolean enabled = true;
     private ElasticSearchEventHandler handler;
     private String indexName; // todo configurable, mirror neo4j indexes??
-    private String nodeQuery;
-    // todo configurable
     private String label;
-    private boolean clientOnly = true;
+    private JestClient client;
 
-    public ElasticSearchExtension(GraphDatabaseService gds, StringLogger logger, String clusterName, String nodeSelection, String indexName) {
-        if (indexName == null || nodeSelection == null)
-            throw new IllegalArgumentException("Index-Name and Node Selection (Label) must be set");
+    public ElasticSearchExtension(GraphDatabaseService gds, StringLogger logger, String hostName, String nodeSelection, String indexName) {
+        if (indexName == null || nodeSelection == null) {
+            logger.error("ElasticSearch Integration: Index-Name and Node Selection (Label) must be set, extension disabled");
+            enabled = false;
+        }
         this.gds = gds;
         this.logger = logger;
-        this.clusterName = clusterName;
+        this.hostName = hostName;
         this.label = nodeSelection;
         this.indexName = indexName;
     }
 
     @Override
     public void init() throws Throwable {
-        node = nodeBuilder().clusterName(clusterName).client(clientOnly).node();
-        Client client = node.client();
-        handler = new ElasticSearchEventHandler(client, indexName,label);
+        if (!enabled) return;
+        JestClientFactory factory = new JestClientFactory();
+        factory.setHttpClientConfig(new HttpClientConfig
+                .Builder(hostName)
+                .multiThreaded(true)
+                .discoveryEnabled(true)
+                .discoveryFrequency(1l, TimeUnit.MINUTES)
+                .build());
+        client = factory.getObject();
+
+        handler = new ElasticSearchEventHandler(client, indexName,label,logger,gds);
         gds.registerTransactionEventHandler(handler);
         logger.info("Connecting to ElasticSearch");
     }
@@ -53,8 +63,9 @@ public class ElasticSearchExtension implements Lifecycle {
 
     @Override
     public void shutdown() throws Throwable {
+        if (!enabled) return;
         gds.unregisterTransactionEventHandler(handler);
-        node.close();
+        client.shutdownClient();
         logger.info("Disconnected from ElasticSearch");
     }
 
