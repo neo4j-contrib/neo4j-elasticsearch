@@ -1,0 +1,28 @@
+== Neo4j Elastic{Search} Integration
+
+Integrates Neo4j change-feed with an ElasticSearch cluster.
+
+=== Approach
+
+This Neo4j Kernel Extension updates an ElasticSearch instance or cluster with changes in the graph.
+
+A transaction event listener checks changed Nodes against a given label, renders the whole node as json document and indexes all changes in bulk with ES.
+
+=== Configuration
+
+Add to `conf/neo4j.properties`:
+
+----
+# optional
+elasticsearch.cluster_name="my.cluster"
+# todo will be more complex later
+elasticsearch.node_selection="label"
+elasticsearch.index="my-index"
+----
+
+=== Todo
+
+* Support set of labels for checking
+* Different index name per label
+* Set of properties per labels to be sent to ES :Label(+prop2,-prop2)
+* idea for syntax `index:Label(+prop,-prop)`
