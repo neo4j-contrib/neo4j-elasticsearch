@@ -1,5 +1,8 @@
 == Neo4j Elastic{Search} Integration
 
+[WARNING]
+*This is still work in progress. Not tested yet.*
+
 Integrates Neo4j change-feed with an ElasticSearch cluster.
 
 === Approach
