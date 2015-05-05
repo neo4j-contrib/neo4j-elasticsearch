@@ -5,6 +5,8 @@ import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.JestResult;
 import io.searchbox.client.config.HttpClientConfig;
 import io.searchbox.core.Get;
+import io.searchbox.indices.CreateIndex;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 public class ElasticSearchEventHandlerTest {
 
+    public static final String INDEX = "test-index";
     public static final String LABEL = "Label";
     private ElasticSearchEventHandler handler;
     private GraphDatabaseService db;
@@ -37,7 +40,8 @@ public class ElasticSearchEventHandlerTest {
         client = factory.getObject();
         logger = new TestLogger();
         db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        handler = new ElasticSearchEventHandler(client, "test-index", LABEL, logger, db);
+        
+        handler = new ElasticSearchEventHandler(client, ElasticSearchIndexSpecParser.parseIndexSpec(INDEX + ":" + LABEL + "(foo)"), logger, db);
         db.registerTransactionEventHandler(handler);
     }
 
@@ -55,11 +59,13 @@ public class ElasticSearchEventHandlerTest {
         String id = String.valueOf(node.getId());
         node.setProperty("foo","bar");
         tx.success();tx.close();
+        
+        Thread.sleep(1000);
 
-        JestResult response = client.execute(new Get.Builder("test-index", id).build());
+        JestResult response = client.execute(new Get.Builder(INDEX, id).build());
 
         assertEquals(true,response.isSucceeded());
-        assertEquals("test-index",response.getValue("_index"));
+        assertEquals(INDEX,response.getValue("_index"));
         assertEquals(id,response.getValue("_id"));
         assertEquals(LABEL,response.getValue("_type"));
 
@@ -69,4 +75,71 @@ public class ElasticSearchEventHandlerTest {
         assertEquals(id, source.get("id"));
         assertEquals("bar", source.get("foo"));
     }
+    
+    @Test
+    public void testDelete() throws Exception
+    {
+        
+        // create index
+        client.execute(new CreateIndex.Builder(INDEX).build());
+
+        Transaction tx = db.beginTx();
+        org.neo4j.graphdb.Node node = db.createNode(DynamicLabel.label(LABEL));
+        String id = String.valueOf(node.getId());
+        node.setProperty("foo","bar");
+        tx.success();tx.close();
+        // wait for the async queries
+        Thread.sleep(1000);
+        
+        JestResult response = client.execute(new Get.Builder(INDEX, id).build());
+        assertEquals(true,response.isSucceeded());
+        assertEquals(INDEX,response.getValue("_index"));
+        assertEquals(id,response.getValue("_id"));
+        assertEquals(LABEL,response.getValue("_type"));
+        
+        tx = db.beginTx();
+        node = db.getNodeById(Integer.parseInt(id));
+        assertEquals("bar", node.getProperty("foo")); // check that we get the node that we just added
+        node.delete();
+        tx.success();tx.close();
+        Thread.sleep(1000);
+        
+        response = client.execute(new Get.Builder(INDEX, id).type(LABEL).build());
+        System.out.println(response.getJsonString());
+        assertEquals(false, response.getValue("found"));
+    }
+    
+    @Test
+    public void testUpdate() throws Exception {
+     // create index
+        client.execute(new CreateIndex.Builder(INDEX).build());
+
+        Transaction tx = db.beginTx();
+        org.neo4j.graphdb.Node node = db.createNode(DynamicLabel.label(LABEL));
+        String id = String.valueOf(node.getId());
+        node.setProperty("foo","bar");
+        tx.success();tx.close();        
+        Thread.sleep(1000);
+        
+        JestResult response = client.execute(new Get.Builder(INDEX, id).build());
+        assertEquals(true,response.isSucceeded());
+        assertEquals(INDEX,response.getValue("_index"));
+        assertEquals(id,response.getValue("_id"));
+        assertEquals(LABEL,response.getValue("_type"));
+        assertEquals("bar", response.getSourceAsObject(Map.class).get("foo"));
+
+        
+        tx = db.beginTx();
+        node = db.getNodeById(Integer.parseInt(id));
+        node.setProperty("foo", "quux");
+        tx.success(); tx.close();
+        Thread.sleep(1000);
+        
+        response = client.execute(new Get.Builder(INDEX, id).type(LABEL).build());
+        assertEquals(true,response.isSucceeded());
+        assertEquals(true, response.getValue("found"));
+        assertEquals("quux", response.getSourceAsObject(Map.class).get("foo"));
+    }
+    
+    
 }

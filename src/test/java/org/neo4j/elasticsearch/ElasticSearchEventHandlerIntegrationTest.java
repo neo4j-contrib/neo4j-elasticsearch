@@ -25,6 +25,7 @@ public class ElasticSearchEventHandlerIntegrationTest {
 
     public static final String LABEL = "MyLabel";
     public static final String INDEX = "my_index";
+    public static final String INDEX_SPEC = INDEX + ":" + LABEL + "(foo)";
     private GraphDatabaseService db;
     private JestClient client;
 
@@ -44,8 +45,7 @@ public class ElasticSearchEventHandlerIntegrationTest {
     private Map<String, String> config() {
         return stringMap(
                 "elasticsearch.host_name", "http://localhost:9200",
-                "elasticsearch.node_selection", LABEL,
-                "elasticsearch.index_name", INDEX);
+                "elasticsearch.index_spec", INDEX_SPEC);
     }
 
     @After
