@@ -16,6 +16,9 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.kernel.impl.util.StringLogger;
 
+
+
+
 import java.util.*;
 
 
@@ -23,12 +26,13 @@ import java.util.*;
 * @author mh
 * @since 25.04.15
 */
-class ElasticSearchEventHandler implements TransactionEventHandler<List<BulkableAction>>, JestResultHandler<JestResult> {
+class ElasticSearchEventHandler implements TransactionEventHandler<Collection<BulkableAction>>, JestResultHandler<JestResult> {
     private final JestClient client;
     private final StringLogger logger;
     private final GraphDatabaseService gds;
     private final Map<Label, List<ElasticSearchIndexSpec>> indexSpecs;
-    private Set<Label> indexLabels;
+    private final Set<Label> indexLabels;
+    private boolean useAsyncJest = true;
 
     public ElasticSearchEventHandler(JestClient client, Map<Label, List<ElasticSearchIndexSpec>> indexSpec, StringLogger logger, GraphDatabaseService gds) {
         this.client = client;
@@ -39,38 +43,48 @@ class ElasticSearchEventHandler implements TransactionEventHandler<List<Bulkable
     }
 
     @Override
-    public List<BulkableAction> beforeCommit(TransactionData transactionData) throws Exception {
-        List<BulkableAction> actions = new ArrayList<>(1000); 
+    public Collection<BulkableAction> beforeCommit(TransactionData transactionData) throws Exception {
+        //List<BulkableAction> actions = new ArrayList<>(1000);
+        Map<IndexId, BulkableAction> actions = new HashMap<>(1000);
         for (Node node : transactionData.createdNodes()) {
-            if (hasLabel(node)) actions.addAll(indexRequests(node));
+            if (hasLabel(node)) actions.putAll(indexRequests(node));
         }
         for (Node node : transactionData.deletedNodes()) {
-            if (hasLabel(node)) actions.addAll(deleteRequests(node));
+            if (hasLabel(node)) actions.putAll(deleteRequests(node));
         }
         for (LabelEntry labelEntry : transactionData.assignedLabels()) {
-            if (hasLabel(labelEntry)) actions.addAll(indexRequests(labelEntry.node()));
+            if (hasLabel(labelEntry)) actions.putAll(indexRequests(labelEntry.node()));
         }
         for (LabelEntry labelEntry : transactionData.removedLabels()) {
-            if (hasLabel(labelEntry)) actions.addAll(deleteRequests(labelEntry.node(), labelEntry.label()));
+            if (hasLabel(labelEntry)) actions.putAll(deleteRequests(labelEntry.node(), labelEntry.label()));
         }
         for (PropertyEntry<Node> propEntry : transactionData.assignedNodeProperties()) {
             if (hasLabel(propEntry))
-                actions.addAll(indexRequests(propEntry.entity()));
+                actions.putAll(indexRequests(propEntry.entity()));
         }
         for (PropertyEntry<Node> propEntry : transactionData.removedNodeProperties()) {
             if (hasLabel(propEntry))
-                actions.addAll(updateRequests(propEntry.entity()));
+                actions.putAll(updateRequests(propEntry.entity()));
         }
-        return actions.isEmpty() ? Collections.<BulkableAction>emptyList() : actions;
+        return actions.isEmpty() ? Collections.<BulkableAction>emptyList() : actions.values();
+    }
+
+    public void setUseAsyncJest(boolean useAsyncJest) {
+        this.useAsyncJest = useAsyncJest;
     }
 
     @Override
-    public void afterCommit(TransactionData transactionData, List<BulkableAction> actions) {
+    public void afterCommit(TransactionData transactionData, Collection<BulkableAction> actions) {
         if (actions.isEmpty()) return;
         try {
             Bulk bulk = new Bulk.Builder()
                     .addAction(actions).build();
-            client.executeAsync(bulk, this);
+            if (useAsyncJest) {
+                client.executeAsync(bulk, this);
+            }
+            else {
+                client.execute(bulk);
+            }
         } catch (Exception e) {
             logger.warn("Error updating ElasticSearch ", e);
         }
@@ -91,62 +105,68 @@ class ElasticSearchEventHandler implements TransactionEventHandler<List<Bulkable
         return hasLabel(propEntry.entity());
     }
     
-    private List<Index> indexRequests(Node node) {
-    	List <Index> reqs = new ArrayList<Index>();
+    private Map<IndexId, Index> indexRequests(Node node) {
+        HashMap<IndexId, Index> reqs = new HashMap<>();
+
+        for (Label l: node.getLabels()) {
+            if (!indexLabels.contains(l)) continue;
+
+            for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
+                String id = id(node), indexName = spec.getIndexName();
+                reqs.put(new IndexId(indexName, id), new Index.Builder(nodeToJson(node, spec.getProperties()))
+                .type(l.name())
+                .index(indexName)
+                .id(id)
+                .build());
+            }
+        }
+        return reqs;
+    }
+
+    private Map<IndexId, Delete> deleteRequests(Node node) {
+        HashMap<IndexId, Delete> reqs = new HashMap<>();
 
     	for (Label l: node.getLabels()) {
     		if (!indexLabels.contains(l)) continue;
-
     		for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
-    			reqs.add(new Index.Builder(nodeToJson(node, spec.getProperties()))
-    			.type(l.name())
-    			.index(spec.getIndexName())
-    			.id(id(node))
-    			.build());
+    		    String id = id(node), indexName = spec.getIndexName();
+    			reqs.put(new IndexId(indexName, id),
+    			         new Delete.Builder(id).index(indexName).build());
     		}
     	}
     	return reqs;
     }
     
-    private List<Delete> deleteRequests(Node node) {
-    	List<Delete> reqs = new ArrayList<Delete>();
-
-    	for (Label l: node.getLabels()) {
-    		if (!indexLabels.contains(l)) continue;
-    		for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
-    			reqs.add(new Delete.Builder(id(node)).index(spec.getIndexName()).build());
-    		}
-    	}
-    	return reqs;
-    	
-    }
-    
-    private List<Delete> deleteRequests(Node node, Label label) {
-        List<Delete> reqs = new ArrayList<Delete>();
+    private Map<IndexId, Delete> deleteRequests(Node node, Label label) {
+        HashMap<IndexId, Delete> reqs = new HashMap<>();
 
         if (indexLabels.contains(label)) {
             for (ElasticSearchIndexSpec spec: indexSpecs.get(label)) {
-                reqs.add(new Delete.Builder(id(node))
-                .index(spec.getIndexName())
-                .type(label.name())
-                .build());
+                String id = id(node), indexName = spec.getIndexName();
+                reqs.put(new IndexId(indexName, id),
+                         new Delete.Builder(id)
+                                   .index(indexName)
+                                   .type(label.name())
+                                   .build());
             }
         }
         return reqs;
         
     }
     
-    private List<Update> updateRequests(Node node) {
-    	List<Update> reqs = new ArrayList<Update>();
+    private Map<IndexId, Update> updateRequests(Node node) {
+    	HashMap<IndexId, Update> reqs = new HashMap<>();
     	for (Label l: node.getLabels()) {
     		if (!indexLabels.contains(l)) continue;
 
     		for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
-    			reqs.add(new Update.Builder(nodeToJson(node, spec.getProperties()))
-    			.type(l.name())
-    			.index(spec.getIndexName())
-    			.id(id(node))
-    			.build());
+    		    String id = id(node), indexName = spec.getIndexName();
+    			reqs.put(new IndexId(indexName, id),
+    			        new Update.Builder(nodeToJson(node, spec.getProperties()))
+                    			  .type(l.name())
+                    			  .index(spec.getIndexName())
+                    			  .id(id(node))
+                    			  .build());
     		}
     	}
     	return reqs;
@@ -178,7 +198,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<List<Bulkable
     }
 
     @Override
-    public void afterRollback(TransactionData transactionData, List<BulkableAction> actions) {
+    public void afterRollback(TransactionData transactionData, Collection<BulkableAction> actions) {
 
     }
 
@@ -195,4 +215,61 @@ class ElasticSearchEventHandler implements TransactionEventHandler<List<Bulkable
     public void failed(Exception e) {
         logger.warn("Problem Updating ElasticSearch ",e);
     }
+    
+    private class IndexId {
+        final String indexName, id;
+        public IndexId(String indexName, String id) {
+            this.indexName = indexName;
+            this.id = id;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getOuterType().hashCode();
+            result = prime * result + ((id == null) ? 0 : id.hashCode());
+            result = prime * result
+                    + ((indexName == null) ? 0 : indexName.hashCode());
+            return result;
+        }
+
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (!(obj instanceof IndexId))
+                return false;
+            IndexId other = (IndexId) obj;
+            if (!getOuterType().equals(other.getOuterType()))
+                return false;
+            if (id == null) {
+                if (other.id != null)
+                    return false;
+            } else if (!id.equals(other.id))
+                return false;
+            if (indexName == null) {
+                if (other.indexName != null)
+                    return false;
+            } else if (!indexName.equals(other.indexName))
+                return false;
+            return true;
+        }
+        
+        private ElasticSearchEventHandler getOuterType() {
+            return ElasticSearchEventHandler.this;
+        }
+
+        @Override
+        public String toString() {
+            return "IndexId [indexName=" + indexName + ", id=" + id + "]";
+        }
+        
+    }
+    
+    
+    
 }
