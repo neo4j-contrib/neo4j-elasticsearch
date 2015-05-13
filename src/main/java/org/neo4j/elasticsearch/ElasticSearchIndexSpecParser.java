@@ -24,7 +24,6 @@ public class ElasticSearchIndexSpecParser {
             return new LinkedHashMap<Label, List<ElasticSearchIndexSpec>>();
         }
         Map<Label, List<ElasticSearchIndexSpec>> map = new LinkedHashMap<Label, List<ElasticSearchIndexSpec>>();
-        System.out.println(spec);
         Matcher matcher = INDEX_SPEC_RE.matcher(spec);
         while (matcher.find()) {
 

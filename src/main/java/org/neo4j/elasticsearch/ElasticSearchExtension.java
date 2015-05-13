@@ -38,6 +38,7 @@ public class ElasticSearchExtension implements Lifecycle {
             logger.error("ElasticSearch Integration: Can't define index twice");
             enabled = false;
 		}
+		logger.info("Elasticsearch Integration: Running " + hostName + " - " + indexSpec);
         this.gds = gds;
         this.logger = logger;
         this.hostName = hostName;
