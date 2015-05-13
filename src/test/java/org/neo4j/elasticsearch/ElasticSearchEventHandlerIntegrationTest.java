@@ -5,10 +5,11 @@ import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.JestResult;
 import io.searchbox.client.config.HttpClientConfig;
 import io.searchbox.core.Get;
+import io.searchbox.indices.CreateIndex;
+import io.searchbox.indices.DeleteIndex;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -23,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-@Ignore
 public class ElasticSearchEventHandlerIntegrationTest {
 
     public static final String LABEL = "MyLabel";
@@ -43,6 +43,9 @@ public class ElasticSearchEventHandlerIntegrationTest {
                 .newImpermanentDatabaseBuilder()
                 .setConfig(config())
                 .newGraphDatabase();
+
+        // create index
+        client.execute(new CreateIndex.Builder(INDEX).build());
     }
 
     private Map<String, String> config() {
@@ -53,6 +56,7 @@ public class ElasticSearchEventHandlerIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
+        client.execute(new DeleteIndex.Builder(INDEX).build());
         client.shutdownClient();
         db.shutdown();
     }
@@ -65,6 +69,8 @@ public class ElasticSearchEventHandlerIntegrationTest {
         node.setProperty("foo", "foobar");
         tx.success();
         tx.close();
+        
+        Thread.sleep(1000); // wait for the async elasticsearch query to complete
 
         JestResult response = client.execute(new Get.Builder(INDEX, id).build());
 
