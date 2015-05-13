@@ -5,13 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 import org.neo4j.graphdb.Label;
 
-
+@Ignore
 public class ElasticSearchIndexSpecParserTest {
   
     @Test

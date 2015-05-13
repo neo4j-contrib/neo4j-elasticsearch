@@ -9,6 +9,7 @@ import io.searchbox.indices.CreateIndex;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -21,6 +22,7 @@ import java.util.Map;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
+@Ignore
 public class ElasticSearchEventHandlerTest {
 
     public static final String INDEX = "test-index";
