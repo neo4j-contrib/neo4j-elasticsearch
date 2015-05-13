@@ -20,15 +20,11 @@ Add to `conf/neo4j.properties`:
 
 ----
 elasticsearch.host_name=http://localhost:9200
-# todo will be more complex later
-elasticsearch.node_selection=MyLabel
-elasticsearch.index_name=my_index
+elasticsearch.index_spec=my_index:Label(prop1,prop2), my_other_index:OtherLabel(prop3)
 ----
 
 
 === Todo
 
-* Support set of labels for checking
-* Different index name per label
-* Set of properties per labels to be sent to ES :Label(+prop2,-prop2)
-* idea for syntax `indexName:Label(+prop,-prop)`
+* Support indexing of relationships?
+
