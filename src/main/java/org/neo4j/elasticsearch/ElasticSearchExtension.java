@@ -3,10 +3,13 @@ package org.neo4j.elasticsearch;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.config.HttpClientConfig;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
+import java.text.ParseException;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,20 +22,26 @@ public class ElasticSearchExtension implements Lifecycle {
     private final String hostName;
     private boolean enabled = true;
     private ElasticSearchEventHandler handler;
-    private String indexName; // todo configurable, mirror neo4j indexes??
-    private String label;
     private JestClient client;
+    private Map indexSpec;
 
-    public ElasticSearchExtension(GraphDatabaseService gds, StringLogger logger, String hostName, String nodeSelection, String indexName) {
-        if (indexName == null || nodeSelection == null) {
-            logger.error("ElasticSearch Integration: Index-Name and Node Selection (Label) must be set, extension disabled");
+    public ElasticSearchExtension(GraphDatabaseService gds, StringLogger logger, String hostName, String indexSpec) {
+        Map iSpec;
+		try {
+			iSpec = ElasticSearchIndexSpecParser.parseIndexSpec(indexSpec);
+			if (iSpec.size() == 0) {
+				logger.error("ElasticSearch Integration: syntax error in index_spec");
+				enabled = false;
+			}
+			this.indexSpec = iSpec;
+		} catch (ParseException e) {
+            logger.error("ElasticSearch Integration: Can't define index twice");
             enabled = false;
-        }
+		}
+		logger.info("Elasticsearch Integration: Running " + hostName + " - " + indexSpec);
         this.gds = gds;
         this.logger = logger;
         this.hostName = hostName;
-        this.label = nodeSelection;
-        this.indexName = indexName;
     }
 
     @Override
@@ -47,7 +56,7 @@ public class ElasticSearchExtension implements Lifecycle {
                 .build());
         client = factory.getObject();
 
-        handler = new ElasticSearchEventHandler(client, indexName,label,logger,gds);
+        handler = new ElasticSearchEventHandler(client,indexSpec,logger,gds);
         gds.registerTransactionEventHandler(handler);
         logger.info("Connecting to ElasticSearch");
     }

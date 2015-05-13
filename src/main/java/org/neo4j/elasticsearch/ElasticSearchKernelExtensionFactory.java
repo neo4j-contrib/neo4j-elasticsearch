@@ -25,8 +25,7 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
     public static abstract class ElasticSearchSettings {
         public static Setting<HostnamePort> clusterAddress = Settings.setting("elasticsearch.address", HOSTNAME_PORT, ":9300");
         public static Setting<String> hostName = setting("elasticsearch.host_name", STRING, (String) null);
-        public static Setting<String> nodeSelection = setting("elasticsearch.node_selection", STRING, (String) null);
-        public static Setting<String> indexName = setting("elasticsearch.index_name", STRING, (String)null);
+        public static Setting<String> indexSpec = setting("elasticsearch.index_spec", STRING, (String) null);
         // todo settings for label, property, indexName
     }
 
@@ -39,8 +38,7 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
         Config config = dependencies.getConfig();
         return new ElasticSearchExtension(dependencies.getGraphDatabaseService(), dependencies.getStringLogger(),
                 config.get(ElasticSearchSettings.hostName),
-                config.get(ElasticSearchSettings.nodeSelection),
-                config.get(ElasticSearchSettings.indexName));
+                config.get(ElasticSearchSettings.indexSpec));
     }
 
     public interface Dependencies {

@@ -5,6 +5,9 @@ import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.JestResult;
 import io.searchbox.client.config.HttpClientConfig;
 import io.searchbox.core.Get;
+import io.searchbox.indices.CreateIndex;
+import io.searchbox.indices.DeleteIndex;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +28,7 @@ public class ElasticSearchEventHandlerIntegrationTest {
 
     public static final String LABEL = "MyLabel";
     public static final String INDEX = "my_index";
+    public static final String INDEX_SPEC = INDEX + ":" + LABEL + "(foo)";
     private GraphDatabaseService db;
     private JestClient client;
 
@@ -39,17 +43,20 @@ public class ElasticSearchEventHandlerIntegrationTest {
                 .newImpermanentDatabaseBuilder()
                 .setConfig(config())
                 .newGraphDatabase();
+
+        // create index
+        client.execute(new CreateIndex.Builder(INDEX).build());
     }
 
     private Map<String, String> config() {
         return stringMap(
                 "elasticsearch.host_name", "http://localhost:9200",
-                "elasticsearch.node_selection", LABEL,
-                "elasticsearch.index_name", INDEX);
+                "elasticsearch.index_spec", INDEX_SPEC);
     }
 
     @After
     public void tearDown() throws Exception {
+        client.execute(new DeleteIndex.Builder(INDEX).build());
         client.shutdownClient();
         db.shutdown();
     }
@@ -62,6 +69,8 @@ public class ElasticSearchEventHandlerIntegrationTest {
         node.setProperty("foo", "foobar");
         tx.success();
         tx.close();
+        
+        Thread.sleep(1000); // wait for the async elasticsearch query to complete
 
         JestResult response = client.execute(new Get.Builder(INDEX, id).build());
 
