@@ -1,8 +1,5 @@
 == Neo4j Elastic{Search} Integration
 
-[WARNING]
-*This is still work in progress. Not tested yet.*
-
 Integrates Neo4j change-feed with an ElasticSearch cluster.
 
 === Approach
@@ -11,20 +8,51 @@ This Neo4j Kernel Extension updates an ElasticSearch instance or cluster with ch
 
 A transaction event listener checks changed Nodes against a given label, renders the whole node as json document and indexes all changes in bulk with ES.
 
-[NOTE]
-For the test to work, an elastic{search} server should be running on localhost:9200
+=== Installation
 
-=== Configuration
+* Clone this repository and run `mvn install -DskipTests`
+* Copy the `jar` files in `target/dependencies` to your Neo4j instance's
+  `plugins` folder
+* Also copy `target/neo4j-elasticsearch-2.2-SNAPSHOT.jar` to the
+  `plugins` folder
+* Modify `conf/neo4j.properties` accordingly (see the Example section)
+* Restart Neo4j
 
-Add to `conf/neo4j.properties`:
+=== Example
+
+Suppose that we keep nodes in our Neo4j instance labeled `Person` and
+`Place`, and that we want to index the values of the `first_name` and
+`last_name` properties of the former and `name` of the latter in two
+separate ElasticSearch indices named `people` and `places`. For that,
+we would add the following directives to `conf/neo4j.properties`:
 
 ----
 elasticsearch.host_name=http://localhost:9200
-elasticsearch.index_spec=my_index:Label(prop1,prop2), my_other_index:OtherLabel(prop3)
+elasticsearch.index_spec=people:Person(first_name,last_name), places:Place(name)
 ----
+
+With that in place, Neo4j will now track changes to nodes labeled
+`Person` or `Place` and keep our ES instance running on
+`localhost:9200` in sync.
+
+To perform an initial import, you can force a commit by executing a
+Cypher query like:
+
+----
+MATCH n:Person
+SET n.first_name = n.first_name, n.last_name = n.last_name;
+
+MATCH n:Place
+SET n.name = n.name;
+----
+
+=== Developing
+
+To run the tests, run `mvn test`. Make sure that an elastic{search} server is running on
+`localhost:9200`.
+
 
 
 === Todo
 
-* Support indexing of relationships?
-
+* Support indexing of relationships
