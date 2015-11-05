@@ -17,7 +17,7 @@ import org.neo4j.graphdb.Label;
 public class ElasticSearchIndexSpecParser {
     
     private final static Pattern INDEX_SPEC_RE = Pattern.compile("(?<indexname>[a-z][a-z_-]+):(?<label>[A-Za-z0-9]+)\\((?<props>[^\\)]+)\\)");
-    private final static Pattern PROPS_SPEC_RE = Pattern.compile("((?!=,)([A-Za-z0-9]+))+");
+    private final static Pattern PROPS_SPEC_RE = Pattern.compile("((?!=,)([A-Za-z0-9_]+))+");
     
     public static Map<Label, List<ElasticSearchIndexSpec>> parseIndexSpec(String spec) throws ParseException {
         if (spec == null) {
