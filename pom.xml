@@ -2,7 +2,7 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <properties>
-        <neo4j.version>2.2.1</neo4j.version>
+        <neo4j.version>2.2.6</neo4j.version>
     </properties>
 
     <modelVersion>4.0.0</modelVersion>
