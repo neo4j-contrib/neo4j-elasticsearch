@@ -14,12 +14,10 @@ import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventHandler;
-import org.neo4j.kernel.impl.util.StringLogger;
-
-
-
 
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -28,17 +26,16 @@ import java.util.*;
 */
 class ElasticSearchEventHandler implements TransactionEventHandler<Collection<BulkableAction>>, JestResultHandler<JestResult> {
     private final JestClient client;
-    private final StringLogger logger;
+    private final static Logger logger = Logger.getLogger(ElasticSearchEventHandler.class.getName());
     private final GraphDatabaseService gds;
     private final Map<Label, List<ElasticSearchIndexSpec>> indexSpecs;
     private final Set<Label> indexLabels;
     private boolean useAsyncJest = true;
 
-    public ElasticSearchEventHandler(JestClient client, Map<Label, List<ElasticSearchIndexSpec>> indexSpec, StringLogger logger, GraphDatabaseService gds) {
+    public ElasticSearchEventHandler(JestClient client, Map<Label, List<ElasticSearchIndexSpec>> indexSpec, GraphDatabaseService gds) {
         this.client = client;
         this.indexSpecs = indexSpec;
         this.indexLabels = indexSpec.keySet();
-        this.logger = logger;
         this.gds = gds;
     }
 
@@ -49,11 +46,17 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
         for (Node node : transactionData.createdNodes()) {
             if (hasLabel(node)) actions.putAll(indexRequests(node));
         }
-        for (Node node : transactionData.deletedNodes()) {
-            if (hasLabel(node)) actions.putAll(deleteRequests(node));
-        }
+//        for (Node node : transactionData.deletedNodes()) {
+//            if (hasLabel(node)) actions.putAll(deleteRequests(node));
+//        }
         for (LabelEntry labelEntry : transactionData.assignedLabels()) {
-            if (hasLabel(labelEntry)) actions.putAll(indexRequests(labelEntry.node()));
+            if (hasLabel(labelEntry)) {
+                if (transactionData.isDeleted(labelEntry.node())) {
+                    actions.putAll(deleteRequests(labelEntry.node()));
+                } else {
+                    actions.putAll(indexRequests(labelEntry.node()));
+                }
+            }
         }
         for (LabelEntry labelEntry : transactionData.removedLabels()) {
             if (hasLabel(labelEntry)) actions.putAll(deleteRequests(labelEntry.node(), labelEntry.label()));
@@ -63,7 +66,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
                 actions.putAll(indexRequests(propEntry.entity()));
         }
         for (PropertyEntry<Node> propEntry : transactionData.removedNodeProperties()) {
-            if (hasLabel(propEntry))
+            if (!transactionData.isDeleted(propEntry.entity()) && hasLabel(propEntry))
                 actions.putAll(updateRequests(propEntry.entity()));
         }
         return actions.isEmpty() ? Collections.<BulkableAction>emptyList() : actions.values();
@@ -86,7 +89,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
                 client.execute(bulk);
             }
         } catch (Exception e) {
-            logger.warn("Error updating ElasticSearch ", e);
+            logger.log(Level.WARNING,"Error updating ElasticSearch ", e);
         }
     }
 
@@ -205,15 +208,15 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
     @Override
     public void completed(JestResult jestResult) {
         if (jestResult.isSucceeded() && jestResult.getErrorMessage() == null) {
-            logger.debug("ElasticSearch Update Success");
+            logger.fine("ElasticSearch Update Success");
         } else {
-            logger.warn("ElasticSearch Update Failed: " + jestResult.getErrorMessage());
+            logger.severe("ElasticSearch Update Failed: " + jestResult.getErrorMessage());
         }
     }
 
     @Override
     public void failed(Exception e) {
-        logger.warn("Problem Updating ElasticSearch ",e);
+        logger.log(Level.WARNING,"Problem Updating ElasticSearch ",e);
     }
     
     private class IndexId {

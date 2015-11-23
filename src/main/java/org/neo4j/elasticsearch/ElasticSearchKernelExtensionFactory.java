@@ -8,7 +8,6 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.Settings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.util.StringLogger;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 import static org.neo4j.helpers.Settings.*;
@@ -36,15 +35,13 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
     @Override
     public Lifecycle newKernelExtension(Dependencies dependencies) throws Throwable {
         Config config = dependencies.getConfig();
-        return new ElasticSearchExtension(dependencies.getGraphDatabaseService(), dependencies.getStringLogger(),
+        return new ElasticSearchExtension(dependencies.getGraphDatabaseService(),
                 config.get(ElasticSearchSettings.hostName),
                 config.get(ElasticSearchSettings.indexSpec));
     }
 
     public interface Dependencies {
         GraphDatabaseService getGraphDatabaseService();
-
-        StringLogger getStringLogger();
 
         Config getConfig();
     }

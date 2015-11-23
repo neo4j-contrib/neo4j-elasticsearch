@@ -14,7 +14,6 @@ import org.junit.Test;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.util.TestLogger;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.Map;

@@ -15,7 +15,6 @@ import org.junit.Test;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.util.TestLogger;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.Map;
@@ -30,7 +29,6 @@ public class ElasticSearchEventHandlerTest {
     private ElasticSearchEventHandler handler;
     private GraphDatabaseService db;
     private JestClient client;
-    private TestLogger logger;
 
     @Before
     public void setUp() throws Exception {
@@ -40,10 +38,9 @@ public class ElasticSearchEventHandlerTest {
                 .multiThreaded(true)
                 .build());
         client = factory.getObject();
-        logger = new TestLogger();
         db = new TestGraphDatabaseFactory().newImpermanentDatabase();
 
-        handler = new ElasticSearchEventHandler(client, ElasticSearchIndexSpecParser.parseIndexSpec(INDEX + ":" + LABEL + "(foo)"), logger, db);
+        handler = new ElasticSearchEventHandler(client, ElasticSearchIndexSpecParser.parseIndexSpec(INDEX + ":" + LABEL + "(foo)"), db);
         // don't use async Jest for testing
         handler.setUseAsyncJest(false);
         db.registerTransactionEventHandler(handler);
