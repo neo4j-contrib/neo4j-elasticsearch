@@ -22,7 +22,6 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
 
     @Description("Settings for the Elastic Search Extension")
     public static abstract class ElasticSearchSettings {
-        public static Setting<HostnamePort> clusterAddress = Settings.setting("elasticsearch.address", HOSTNAME_PORT, ":9300");
         public static Setting<String> hostName = setting("elasticsearch.host_name", STRING, (String) null);
         public static Setting<String> indexSpec = setting("elasticsearch.index_spec", STRING, (String) null);
         // todo settings for label, property, indexName
