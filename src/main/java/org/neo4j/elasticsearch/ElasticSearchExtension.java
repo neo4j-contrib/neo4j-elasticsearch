@@ -21,9 +21,9 @@ public class ElasticSearchExtension implements Lifecycle {
     private boolean enabled = true;
     private ElasticSearchEventHandler handler;
     private JestClient client;
-    private Map indexSpec;
+    private ElasticSearchIndexSettings indexSettings;
 
-    public ElasticSearchExtension(GraphDatabaseService gds, String hostName, String indexSpec) {
+    public ElasticSearchExtension(GraphDatabaseService gds, String hostName, String indexSpec, Boolean includeIDField, Boolean includeLabelsField) {
         Map iSpec;
         try {
             iSpec = ElasticSearchIndexSpecParser.parseIndexSpec(indexSpec);
@@ -31,7 +31,7 @@ public class ElasticSearchExtension implements Lifecycle {
                 logger.severe("ElasticSearch Integration: syntax error in index_spec");
                 enabled = false;
             }
-            this.indexSpec = iSpec;
+            this.indexSettings = new ElasticSearchIndexSettings(iSpec, includeIDField, includeLabelsField);
         } catch (ParseException e) {
             logger.severe("ElasticSearch Integration: Can't define index twice");
             enabled = false;
@@ -46,7 +46,7 @@ public class ElasticSearchExtension implements Lifecycle {
         if (!enabled) return;
 
         client = getJestClient(hostName);
-        handler = new ElasticSearchEventHandler(client,indexSpec,gds);
+        handler = new ElasticSearchEventHandler(client, indexSettings, gds);
         gds.registerTransactionEventHandler(handler);
         logger.info("Connecting to ElasticSearch");
     }

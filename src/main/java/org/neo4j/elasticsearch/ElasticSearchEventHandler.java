@@ -19,7 +19,6 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 /**
 * @author mh
 * @since 25.04.15
@@ -28,27 +27,24 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
     private final JestClient client;
     private final static Logger logger = Logger.getLogger(ElasticSearchEventHandler.class.getName());
     private final GraphDatabaseService gds;
-    private final Map<Label, List<ElasticSearchIndexSpec>> indexSpecs;
+    private final ElasticSearchIndexSettings indexSettings;
     private final Set<Label> indexLabels;
     private boolean useAsyncJest = true;
 
-    public ElasticSearchEventHandler(JestClient client, Map<Label, List<ElasticSearchIndexSpec>> indexSpec, GraphDatabaseService gds) {
+    public ElasticSearchEventHandler(JestClient client, ElasticSearchIndexSettings indexSettings, GraphDatabaseService gds) {
         this.client = client;
-        this.indexSpecs = indexSpec;
-        this.indexLabels = indexSpec.keySet();
+        this.indexSettings = indexSettings;
+        this.indexLabels = indexSettings.getIndexSpec().keySet();
         this.gds = gds;
     }
 
     @Override
     public Collection<BulkableAction> beforeCommit(TransactionData transactionData) throws Exception {
-        //List<BulkableAction> actions = new ArrayList<>(1000);
         Map<IndexId, BulkableAction> actions = new HashMap<>(1000);
+
         for (Node node : transactionData.createdNodes()) {
             if (hasLabel(node)) actions.putAll(indexRequests(node));
         }
-//        for (Node node : transactionData.deletedNodes()) {
-//            if (hasLabel(node)) actions.putAll(deleteRequests(node));
-//        }
         for (LabelEntry labelEntry : transactionData.assignedLabels()) {
             if (hasLabel(labelEntry)) {
                 if (transactionData.isDeleted(labelEntry.node())) {
@@ -89,7 +85,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
                 client.execute(bulk);
             }
         } catch (Exception e) {
-            logger.log(Level.WARNING,"Error updating ElasticSearch ", e);
+            logger.log(Level.WARNING, "Error updating ElasticSearch ", e);
         }
     }
 
@@ -114,7 +110,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
         for (Label l: node.getLabels()) {
             if (!indexLabels.contains(l)) continue;
 
-            for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
+            for (ElasticSearchIndexSpec spec: indexSettings.getIndexSpec().get(l)) {
                 String id = id(node), indexName = spec.getIndexName();
                 reqs.put(new IndexId(indexName, id), new Index.Builder(nodeToJson(node, spec.getProperties()))
                 .type(l.name())
@@ -131,7 +127,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
 
     	for (Label l: node.getLabels()) {
     		if (!indexLabels.contains(l)) continue;
-    		for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
+    		for (ElasticSearchIndexSpec spec: indexSettings.getIndexSpec().get(l)) {
     		    String id = id(node), indexName = spec.getIndexName();
     			reqs.put(new IndexId(indexName, id),
     			         new Delete.Builder(id).index(indexName).build());
@@ -144,7 +140,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
         HashMap<IndexId, Delete> reqs = new HashMap<>();
 
         if (indexLabels.contains(label)) {
-            for (ElasticSearchIndexSpec spec: indexSpecs.get(label)) {
+            for (ElasticSearchIndexSpec spec: indexSettings.getIndexSpec().get(label)) {
                 String id = id(node), indexName = spec.getIndexName();
                 reqs.put(new IndexId(indexName, id),
                          new Delete.Builder(id)
@@ -154,7 +150,6 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
             }
         }
         return reqs;
-        
     }
     
     private Map<IndexId, Update> updateRequests(Node node) {
@@ -162,7 +157,7 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
     	for (Label l: node.getLabels()) {
     		if (!indexLabels.contains(l)) continue;
 
-    		for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
+    		for (ElasticSearchIndexSpec spec: indexSettings.getIndexSpec().get(l)) {
     		    String id = id(node), indexName = spec.getIndexName();
     			reqs.put(new IndexId(indexName, id),
     			        new Update.Builder(nodeToJson(node, spec.getProperties()))
@@ -175,15 +170,19 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
     	return reqs;
     }
 
-
     private String id(Node node) {
         return String.valueOf(node.getId());
     }
 
     private Map nodeToJson(Node node, Set<String> properties) {
         Map<String,Object> json = new LinkedHashMap<>();
-        json.put("id", id(node));
-        json.put("labels", labels(node));
+        
+        if(indexSettings.getIncludeIDField()) 
+        	json.put("id", id(node));
+        
+        if(indexSettings.getIncludeLabelsField()) 
+        	json.put("labels", labels(node));
+
         for (String prop : properties) {
             Object value = node.getProperty(prop);
             json.put(prop, value);
@@ -191,7 +190,6 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
         return json;
     }
     
-
     private String[] labels(Node node) {
         List<String> result=new ArrayList<>();
         for (Label label : node.getLabels()) {
@@ -202,7 +200,6 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
 
     @Override
     public void afterRollback(TransactionData transactionData, Collection<BulkableAction> actions) {
-
     }
 
     @Override
@@ -237,7 +234,6 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
             return result;
         }
 
-
         @Override
         public boolean equals(Object obj) {
             if (this == obj)
@@ -270,9 +266,5 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
         public String toString() {
             return "IndexId [indexName=" + indexName + ", id=" + id + "]";
         }
-        
     }
-    
-    
-    
 }
