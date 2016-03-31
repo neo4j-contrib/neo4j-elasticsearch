@@ -104,6 +104,12 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
     private boolean hasLabel(PropertyEntry<Node> propEntry) {
         return hasLabel(propEntry.entity());
     }
+
+    private Set<String> getIntersectingProperties(ElasticSearchIndexSpec spec, Node node) {
+      Set<String> specProperties = new HashSet<String>(spec.getProperties());
+      specProperties.retainAll((Collection)node.getPropertyKeys());
+      return specProperties;
+    }
     
     private Map<IndexId, Index> indexRequests(Node node) {
         HashMap<IndexId, Index> reqs = new HashMap<>();
@@ -113,7 +119,8 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
 
             for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
                 String id = id(node), indexName = spec.getIndexName();
-                reqs.put(new IndexId(indexName, id), new Index.Builder(nodeToJson(node, spec.getProperties()))
+                Set<String> intersectingProperties = getIntersectingProperties(spec, node);
+                reqs.put(new IndexId(indexName, id), new Index.Builder(nodeToJson(node, intersectingProperties))
                 .type(l.name())
                 .index(indexName)
                 .id(id)
@@ -161,8 +168,9 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
 
     		for (ElasticSearchIndexSpec spec: indexSpecs.get(l)) {
     		    String id = id(node), indexName = spec.getIndexName();
+            Set<String> intersectingProperties = getIntersectingProperties(spec, node);
     			reqs.put(new IndexId(indexName, id),
-    			        new Update.Builder(nodeToJson(node, spec.getProperties()))
+    			        new Update.Builder(nodeToJson(node, intersectingProperties))
                     			  .type(l.name())
                     			  .index(spec.getIndexName())
                     			  .id(id(node))
