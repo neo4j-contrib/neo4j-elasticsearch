@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
@@ -63,7 +64,7 @@ public class ElasticSearchEventHandlerIntegrationTest {
     @Test
     public void testAfterCommit() throws Exception {
         Transaction tx = db.beginTx();
-        org.neo4j.graphdb.Node node = db.createNode(DynamicLabel.label(LABEL));
+        org.neo4j.graphdb.Node node = db.createNode(Label.label(LABEL));
         String id = String.valueOf(node.getId());
         node.setProperty("foo", "foobar");
         tx.success();
@@ -73,7 +74,7 @@ public class ElasticSearchEventHandlerIntegrationTest {
 
         JestResult response = client.execute(new Get.Builder(INDEX, id).build());
 
-        assertEquals(true, response.isSucceeded());
+        assertEquals("request failed "+response.getErrorMessage(),true, response.isSucceeded());
         assertEquals(INDEX, response.getValue("_index"));
         assertEquals(id, response.getValue("_id"));
         assertEquals(LABEL, response.getValue("_type"));
