@@ -3,3 +3,7 @@ jdk:
   - oraclejdk8
 script: 
   - mvn test -Dmaven.javadoc.skip=true
+services:
+  - elasticsearch
+before_script:
+  - sleep 10
