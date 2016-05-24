@@ -13,9 +13,9 @@ A transaction event listener checks changed Nodes against a given label, renders
 * Clone this repository and run `mvn install -DskipTests`
 * Copy the `jar` files in `target/dependency` to your Neo4j instance's
   `plugins` folder
-* Also copy `target/neo4j-elasticsearch-2.3-SNAPSHOT.jar` to the
+* Also copy `target/neo4j-elasticsearch-3.0-SNAPSHOT.jar` to the
   `plugins` folder
-* Modify `conf/neo4j.properties` accordingly (see the Example section)
+* Modify `conf/neo4j.conf` accordingly (see the Example section)
 * Restart Neo4j
 
 === Example
@@ -24,7 +24,7 @@ Suppose that we keep nodes in our Neo4j instance labeled `Person` and
 `Place`, and that we want to index the values of the `first_name` and
 `last_name` properties of the former and `name` of the latter in two
 separate ElasticSearch indices named `people` and `places`. For that,
-we would add the following directives to `conf/neo4j.properties`:
+we would add the following directives to `conf/neo4j.conf`:
 
 ----
 elasticsearch.host_name=http://localhost:9200
@@ -49,7 +49,7 @@ SET n.name = n.name;
 ==== ID / Labels fields
 By default, the indexes created will contain fields for the Neo4j ID and Labels, named `id` and `labels`. 
 These will be auto-created as searchable fields, but, if you'd prefer they not be included,
-simply add one or both of these lines to your `conf/neo4j.properties` file.
+simply add one or both of these lines to your `conf/neo4j.conf` file.
 ```
 elasticsearch.include_id_field=false
 elasticsearch.include_labels_field=false
