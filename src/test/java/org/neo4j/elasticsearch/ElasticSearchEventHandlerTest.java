@@ -7,22 +7,19 @@ import io.searchbox.client.config.HttpClientConfig;
 import io.searchbox.core.Get;
 import io.searchbox.indices.CreateIndex;
 import io.searchbox.indices.DeleteIndex;
-
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
-import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
 public class ElasticSearchEventHandlerTest {
@@ -45,12 +42,12 @@ public class ElasticSearchEventHandlerTest {
                 .build());
         client = factory.getObject();
         db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        
-        Map<Label, List<ElasticSearchIndexSpec>> indexSpec;
-        indexSpec = ElasticSearchIndexSpecParser.parseIndexSpec(INDEX + ":" + LABEL + "(foo)");
+
+        Map<String, List<ElasticSearchIndexSpec>> indexSpec =
+                ElasticSearchIndexSpecParser.parseIndexSpec(INDEX + ":" + LABEL + "(foo)");
         indexSettings = new ElasticSearchIndexSettings(indexSpec, true, true);
         
-        handler = new ElasticSearchEventHandler(client, indexSettings, db);
+        handler = new ElasticSearchEventHandler(client, indexSettings);
         handler.setUseAsyncJest(false); // don't use async Jest for testing
         db.registerTransactionEventHandler(handler);
         
@@ -70,7 +67,7 @@ public class ElasticSearchEventHandlerTest {
 
     private Node createNode() {
         Transaction tx = db.beginTx();
-        Node node = db.createNode(DynamicLabel.label(LABEL));
+        Node node = db.createNode(Label.label(LABEL));
         node.setProperty("foo", "bar");
         tx.success();tx.close();
         id = String.valueOf(node.getId());
@@ -91,7 +88,7 @@ public class ElasticSearchEventHandlerTest {
         assertIndexCreation(response);
 
         Map source = response.getSourceAsObject(Map.class);
-        assertEquals(asList(LABEL), source.get("labels"));
+        assertEquals(singletonList(LABEL), source.get("labels"));
         assertEquals(id, source.get("id"));
         assertEquals("bar", source.get("foo"));
     }
@@ -100,14 +97,14 @@ public class ElasticSearchEventHandlerTest {
     public void testAfterCommitWithoutID() throws Exception {
         client.execute(new DeleteIndex.Builder(INDEX).build());
         indexSettings.setIncludeIDField(false);
-        JestResult response = client.execute(new CreateIndex.Builder(INDEX).build());
+        client.execute(new CreateIndex.Builder(INDEX).build());
         node = createNode();
-        
-        response = client.execute(new Get.Builder(INDEX, id).build());
+
+        JestResult response = client.execute(new Get.Builder(INDEX, id).build());
         assertIndexCreation(response);
 
         Map source = response.getSourceAsObject(Map.class);
-        assertEquals(asList(LABEL), source.get("labels"));
+        assertEquals(singletonList(LABEL), source.get("labels"));
         assertEquals(null, source.get("id"));
         assertEquals("bar", source.get("foo"));
     }
@@ -116,10 +113,10 @@ public class ElasticSearchEventHandlerTest {
     public void testAfterCommitWithoutLabels() throws Exception {
         client.execute(new DeleteIndex.Builder(INDEX).build());
         indexSettings.setIncludeLabelsField(false);
-        JestResult response = client.execute(new CreateIndex.Builder(INDEX).build());
+        client.execute(new CreateIndex.Builder(INDEX).build());
         node = createNode();
-        
-        response = client.execute(new Get.Builder(INDEX, id).build());
+
+        JestResult response = client.execute(new Get.Builder(INDEX, id).build());
         assertIndexCreation(response);
 
         Map source = response.getSourceAsObject(Map.class);

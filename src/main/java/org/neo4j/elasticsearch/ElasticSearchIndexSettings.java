@@ -2,10 +2,9 @@ package org.neo4j.elasticsearch;
 
 import java.util.List;
 import java.util.Map;
-import org.neo4j.graphdb.Label;
 
 public class ElasticSearchIndexSettings {
-    private Map<Label, List<ElasticSearchIndexSpec>> indexSpec;
+    private Map<String, List<ElasticSearchIndexSpec>> indexSpec;
     private boolean includeIDField;
     private boolean includeLabelsField;
 
@@ -15,7 +14,7 @@ public class ElasticSearchIndexSettings {
     	this.includeLabelsField = includeLabelsField;
     }
     
-    public Map<Label, List<ElasticSearchIndexSpec>> getIndexSpec() {
+    public Map<String, List<ElasticSearchIndexSpec>> getIndexSpec() {
     	return indexSpec;
     }
     public boolean getIncludeIDField() {
