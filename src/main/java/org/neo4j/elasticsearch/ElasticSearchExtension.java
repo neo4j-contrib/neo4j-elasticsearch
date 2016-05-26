@@ -4,7 +4,7 @@ import io.searchbox.client.JestClient;
 import io.searchbox.client.JestClientFactory;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import java.util.Map;
 import java.util.logging.Logger;
@@ -14,7 +14,7 @@ import java.text.ParseException;
  * @author mh
  * @since 25.04.15
  */
-public class ElasticSearchExtension implements Lifecycle {
+public class ElasticSearchExtension extends LifecycleAdapter {
     private final GraphDatabaseService gds;
     private final static Logger logger = Logger.getLogger(ElasticSearchExtension.class.getName());
     private final String hostName;
@@ -46,17 +46,9 @@ public class ElasticSearchExtension implements Lifecycle {
         if (!enabled) return;
 
         client = getJestClient(hostName);
-        handler = new ElasticSearchEventHandler(client, indexSettings, gds);
+        handler = new ElasticSearchEventHandler(client, indexSettings);
         gds.registerTransactionEventHandler(handler);
         logger.info("Connecting to ElasticSearch");
-    }
-
-    @Override
-    public void start() throws Throwable {
-    }
-
-    @Override
-    public void stop() throws Throwable {
     }
 
     @Override
