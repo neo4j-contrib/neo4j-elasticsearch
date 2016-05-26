@@ -10,10 +10,7 @@ import io.searchbox.indices.DeleteIndex;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.List;
@@ -67,7 +64,7 @@ public class ElasticSearchEventHandlerTest {
 
     private Node createNode() {
         Transaction tx = db.beginTx();
-        Node node = db.createNode(Label.label(LABEL));
+        Node node = db.createNode(DynamicLabel.label(LABEL));
         node.setProperty("foo", "bar");
         tx.success();tx.close();
         id = String.valueOf(node.getId());
