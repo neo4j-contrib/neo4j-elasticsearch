@@ -17,9 +17,11 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.util.TestLogger;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -70,18 +72,18 @@ public class ElasticSearchEventHandlerIntegrationTest {
         tx.success();
         tx.close();
         
-        Thread.sleep(1000); // wait for the async elasticsearch query to complete
+        Thread.sleep(10000); // wait for the async elasticsearch query to complete
 
         JestResult response = client.execute(new Get.Builder(INDEX, id).build());
 
-        assertEquals(true, response.isSucceeded());
+        assertEquals(response.getErrorMessage(), true, response.isSucceeded());
         assertEquals(INDEX, response.getValue("_index"));
         assertEquals(id, response.getValue("_id"));
         assertEquals(LABEL, response.getValue("_type"));
 
 
         Map source = response.getSourceAsObject(Map.class);
-        assertEquals(asList(LABEL), source.get("labels"));
+        assertEquals(singletonList(LABEL), source.get("labels"));
         assertEquals(id, source.get("id"));
         assertEquals("foobar", source.get("foo"));
     }
