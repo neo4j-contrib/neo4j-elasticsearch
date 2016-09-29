@@ -2,6 +2,8 @@
 
 Integrates Neo4j change-feed with an ElasticSearch cluster.
 
+The different versions of Neo4j (2.2, 2.3 and 3.0 are supported on different branches).
+
 === Approach
 
 This Neo4j Kernel Extension updates an ElasticSearch instance or cluster with changes in the graph.
