@@ -4,7 +4,7 @@ image:https://travis-ci.org/neo4j-contrib/neo4j-elasticsearch.svg?branch=3.0["Bu
 
 Integrates Neo4j change-feed with an ElasticSearch cluster.
 
-The different versions of Neo4j (2.2, 2.3 and 3.0 are supported on different branches).
+The different versions of Neo4j (2.2.x, 2.3.x and 3.0.x are supported on different branches).
 
 === Approach
 
@@ -17,7 +17,7 @@ A transaction event listener checks changed Nodes against a given label, renders
 * Clone this repository and run `mvn clean install -DskipTests`
 * Copy the `jar` files in `target/dependency` to your Neo4j instance's
   `plugins` folder
-* Also copy `target/neo4j-elasticsearch-3.0-SNAPSHOT.jar` to the
+* Also copy `target/neo4j-elasticsearch-3.0.0.jar` to the
   `plugins` folder
 * Modify `conf/neo4j.conf` accordingly (see the Example section)
 * Restart Neo4j
