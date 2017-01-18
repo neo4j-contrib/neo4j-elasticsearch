@@ -183,8 +183,10 @@ class ElasticSearchEventHandler implements TransactionEventHandler<Collection<Bu
         	json.put("labels", labels(node));
 
         for (String prop : properties) {
-            Object value = node.getProperty(prop);
-            json.put(prop, value);
+            if(node.hasProperty(prop)){
+                Object value = node.getProperty(prop);
+                json.put(prop, value);
+            }
         }
         return json;
     }
