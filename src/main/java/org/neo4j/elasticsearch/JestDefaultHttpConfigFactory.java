@@ -18,15 +18,17 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.*;
 
 public class JestDefaultHttpConfigFactory {
-  public static HttpClientConfig getConfigFor(final String hostName) throws URISyntaxException, GeneralSecurityException {
-    return new HttpClientConfig.Builder(hostName)
-      .multiThreaded(true)
-      .defaultSchemeForDiscoveredNodes(new URI(hostName).getScheme())
-      .discoveryEnabled(true)
-      .discoveryFrequency(1L, TimeUnit.MINUTES)
-      .sslSocketFactory(getSyncHttpsHandler())
-      .httpsIOSessionStrategy(getAsyncHttpsHandler())
-      .build();
+  public static HttpClientConfig getConfigFor(final String hostName, final Boolean discovery) throws URISyntaxException, GeneralSecurityException {
+    HttpClientConfig.Builder clientConfig = new HttpClientConfig.Builder(hostName)
+            .multiThreaded(true)
+            .defaultSchemeForDiscoveredNodes(new URI(hostName).getScheme())
+            .sslSocketFactory(getSyncHttpsHandler())
+            .httpsIOSessionStrategy(getAsyncHttpsHandler());
+    if (discovery == true) {
+      clientConfig.discoveryFrequency(1L, TimeUnit.MINUTES).discoveryEnabled(true);
+    }
+
+    return clientConfig.build();
   }
 
   private static SSLConnectionSocketFactory getSyncHttpsHandler() throws GeneralSecurityException {

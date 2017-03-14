@@ -23,6 +23,7 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
     public static abstract class ElasticSearchSettings {
         public static Setting<String> hostName = setting("elasticsearch.host_name", STRING, (String) null);
         public static Setting<String> indexSpec = setting("elasticsearch.index_spec", STRING, (String) null);
+        public static Setting<Boolean> discovery = setting("elasticsearch.discovery", BOOLEAN, "false");
         public static Setting<Boolean> includeIDField = setting("elasticsearch.include_id_field", BOOLEAN, "true");
         public static Setting<Boolean> includeLabelsField = setting("elasticsearch.include_labels_field", BOOLEAN, "true");
         // todo settings for label, property, indexName
@@ -39,6 +40,7 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
         return new ElasticSearchExtension(dependencies.getGraphDatabaseService(),
                 config.get(ElasticSearchSettings.hostName),
                 config.get(ElasticSearchSettings.indexSpec),
+                config.get(ElasticSearchSettings.discovery),
                 config.get(ElasticSearchSettings.includeIDField),
                 config.get(ElasticSearchSettings.includeLabelsField));
     }

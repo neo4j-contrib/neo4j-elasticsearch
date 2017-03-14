@@ -59,6 +59,13 @@ elasticsearch.include_id_field=false
 elasticsearch.include_labels_field=false
 ```
 
+=== Discovery
+By default discovery (discovering of nodes within a cluster) is turned off.
+If you would like to turn discovery on, use the discovery option.
+```
+elasticsearch.discovery=true
+```
+
 === Developing
 
 To run the tests, run `mvn test`. Make sure that an elastic{search} server is running on
