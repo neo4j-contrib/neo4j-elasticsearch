@@ -15,7 +15,7 @@ A transaction event listener checks changed Nodes against a given label, renders
 === Installation
 
 * Clone this repository and run `mvn clean install -DskipTests`
-* Copy the `jar` files in `target/dependency` to your Neo4j instance's
+* Run `mvn dependency:copy-dependencies`. Copy the `jar` files in `target/dependency` to your Neo4j instance's
   `plugins` folder
 * Also copy `target/neo4j-elasticsearch-3.0.0.jar` to the
   `plugins` folder
