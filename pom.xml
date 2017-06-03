@@ -1,17 +1,18 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <properties>
-        <neo4j.version>3.0.8</neo4j.version>
-    </properties>
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.neo4j</groupId>
     <artifactId>neo4j-elasticsearch</artifactId>
     <packaging>jar</packaging>
-    <version>3.0.0</version>
+    <version>3.0.9</version>
     <name>neo4j-elasticsearch</name>
     <description>Neo4j Elasticsearch Integration</description>
+
+    <properties>
+        <neo4j.version>${project.version}</neo4j.version>
+    </properties>
 
     <build>
         <plugins>
@@ -19,34 +20,22 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.2</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
-
             <plugin>
-                <artifactId>maven-dependency-plugin</artifactId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.3</version>
                 <executions>
                     <execution>
-                        <id>copy-dependencies</id>
-                        <phase>process-resources</phase>
+                        <phase>package</phase>
                         <goals>
-                            <goal>copy-dependencies</goal>
+                            <goal>shade</goal>
                         </goals>
-                        <configuration>
-                            <includeScope>runtime</includeScope>
-                        </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
             </plugin>
         </plugins>
     </build>

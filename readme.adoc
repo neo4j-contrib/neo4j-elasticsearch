@@ -4,7 +4,7 @@ image:https://travis-ci.org/neo4j-contrib/neo4j-elasticsearch.svg?branch=3.0["Bu
 
 Integrates Neo4j change-feed with an ElasticSearch cluster.
 
-The different versions of Neo4j (2.2.x, 2.3.x and 3.0.x are supported on different branches).
+The different versions of Neo4j (2.2.x, 2.3.x,3.0.x and 3.1.x are supported on different branches).
 
 === Approach
 
@@ -14,12 +14,9 @@ A transaction event listener checks changed Nodes against a given label, renders
 
 === Installation
 
-* Clone this repository and run `mvn clean install -DskipTests`
-* Run `mvn dependency:copy-dependencies`. Copy the `jar` files in `target/dependency` to your Neo4j instance's
-  `plugins` folder
-* Also copy `target/neo4j-elasticsearch-3.0.0.jar` to the
-  `plugins` folder
-* Modify `conf/neo4j.conf` accordingly (see the Example section)
+* Download the jar from the http://github.com/neo4j-contrib/neo4j-elasticsearch/releases[latest release] for your Neo4j release line.
+* Copy to `$NEO4J_HOME/plugins` or for Neo4j community to the plugins folder that you find on the `Options` pane.
+* Modify `$NEO4J_HOME/conf/neo4j.conf` accordingly (see the Example section)
 * Restart Neo4j
 
 === Example
@@ -54,6 +51,7 @@ SET n.name = n.name;
 By default, the indexes created will contain fields for the Neo4j ID and Labels, named `id` and `labels`. 
 These will be auto-created as searchable fields, but, if you'd prefer they not be included,
 simply add one or both of these lines to your `conf/neo4j.conf` file.
+
 ```
 elasticsearch.include_id_field=false
 elasticsearch.include_labels_field=false
@@ -63,8 +61,6 @@ elasticsearch.include_labels_field=false
 
 To run the tests, run `mvn test`. Make sure that an elastic{search} server is running on
 `localhost:9200`.
-
-
 
 === Todo
 
