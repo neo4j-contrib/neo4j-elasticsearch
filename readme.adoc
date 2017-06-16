@@ -14,7 +14,7 @@ A transaction event listener checks changed Nodes against a given label, renders
 
 === Installation
 
-* Download the jar from the http://github.com/neo4j-contrib/neo4j-elasticsearch[latest release].
+* Download the jar from the https://github.com/neo4j-contrib/neo4j-elasticsearch/releases[latest release].
 * Copy to `$NEO4J_HOME/plugins` or for Neo4j community to the plugins folder that you find on the `Options` pane.
 * Modify `$NEO4J_HOME/conf/neo4j.conf` accordingly (see the Example section)
 * Restart Neo4j
