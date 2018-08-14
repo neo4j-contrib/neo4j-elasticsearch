@@ -34,7 +34,7 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
     }
 
     @Override
-    public Lifecycle newInstance(KernelContext kernelContext, Dependencies dependencies) throws Throwable {
+    public Lifecycle newInstance(KernelContext kernelContext, Dependencies dependencies) {
         Config config = dependencies.getConfig();
         
         return new ElasticSearchExtension(dependencies.getGraphDatabaseService(),

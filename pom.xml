@@ -6,7 +6,7 @@
     <groupId>org.neo4j</groupId>
     <artifactId>neo4j-elasticsearch</artifactId>
     <packaging>jar</packaging>
-    <version>3.3.6</version>
+    <version>3.4.5</version>
     <name>neo4j-elasticsearch</name>
     <description>Neo4j Elasticsearch Integration</description>
 
