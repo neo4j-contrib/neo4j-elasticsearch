@@ -14,6 +14,19 @@
         <neo4j.version>${project.version}</neo4j.version>
     </properties>
 
+    <licenses>
+      <license>
+        <name>The Apache Software License, Version 2.0</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <comments>
+          Note that this license is for the project itself,
+          and not for its dependencies. See the included NOTICE.txt
+          file for further details.
+          </comments>
+          <distribution>repo</distribution>
+      </license>
+    </licenses>
+
     <build>
         <plugins>
             <plugin>
