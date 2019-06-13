@@ -5,6 +5,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.Description;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -30,7 +31,7 @@ public class ElasticSearchKernelExtensionFactory extends KernelExtensionFactory<
     }
 
     public ElasticSearchKernelExtensionFactory() {
-        super(SERVICE_NAME);
+        super(ExtensionType.DATABASE, SERVICE_NAME);
     }
 
     @Override

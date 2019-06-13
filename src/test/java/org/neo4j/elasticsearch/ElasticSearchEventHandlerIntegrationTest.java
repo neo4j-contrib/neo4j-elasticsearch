@@ -7,11 +7,9 @@ import io.searchbox.client.config.HttpClientConfig;
 import io.searchbox.core.Get;
 import io.searchbox.indices.CreateIndex;
 import io.searchbox.indices.DeleteIndex;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -21,7 +19,6 @@ import java.util.Map;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 public class ElasticSearchEventHandlerIntegrationTest {

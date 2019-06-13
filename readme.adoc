@@ -1,10 +1,10 @@
 == Neo4j Elastic{Search} Integration
 
-image:https://travis-ci.org/neo4j-contrib/neo4j-elasticsearch.svg?branch=3.1["Build Status", link="https://travis-ci.org/neo4j-contrib/neo4j-elasticsearch"]
+image:https://travis-ci.org/neo4j-contrib/neo4j-elasticsearch.svg?branch=3.5["Build Status", link="https://travis-ci.org/neo4j-contrib/neo4j-elasticsearch"]
 
 Integrates Neo4j change-feed with an ElasticSearch cluster.
 
-The different versions of Neo4j (2.2.x, 2.3.x, 3.0.x, and 3.1.x are supported on different branches).
+The different versions of Neo4j (3.x are supported on different branches).
 
 === Approach
 

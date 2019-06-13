@@ -6,7 +6,7 @@
     <groupId>org.neo4j</groupId>
     <artifactId>neo4j-elasticsearch</artifactId>
     <packaging>jar</packaging>
-    <version>3.4.5</version>
+    <version>3.5.6</version>
     <name>neo4j-elasticsearch</name>
     <description>Neo4j Elasticsearch Integration</description>
 
@@ -79,17 +79,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-kernel</artifactId>
-            <version>${neo4j.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-io</artifactId>
-            <version>${neo4j.version}</version>
-            <type>test-jar</type>
+            <groupId>org.neo4j.community</groupId>
+            <artifactId>it-test-support</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
